@@ -33,9 +33,7 @@ echo "REQUEST_HEADERS:"
 printf '%s\n' 'Content-Type: application/json'
 echo "REQUEST_BODY:"
 printf '%s\n' '{}'
-auth_code="$(curl -sS -X POST "$BASE_URL/auth/anonymous" \
-  -H 'Content-Type: application/json' \
-  -d '{}' \
+auth_code="$(curl -sS -L -X GET "$BASE_URL/auth/anonymous" \
   -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
   -D "$AUTH_HEADERS" -o "$AUTH_BODY" -w '%{http_code}')"
 echo "RESPONSE_HEADERS:"
