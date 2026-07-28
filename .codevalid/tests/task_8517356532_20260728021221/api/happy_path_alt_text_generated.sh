@@ -23,7 +23,7 @@ echo "STEP: Given — bootstrap an authenticated user session and prepare a vali
 echo "PREREQ: creating anonymous auth session for upload request"
 echo "REQUEST_HEADERS: Accept: */*"
 echo "REQUEST_BODY: empty"
-GIVEN_STATUS=$(curl -sS -D "$GIVEN_HEADERS" -o "$GIVEN_BODY" -w '%{http_code}' -c "$COOKIE_JAR" -b "$COOKIE_JAR" "$BASE_URL/auth/anonymous")
+GIVEN_STATUS=$(curl -sS -L -D "$GIVEN_HEADERS" -o "$GIVEN_BODY" -w '%{http_code}' -c "$COOKIE_JAR" -b "$COOKIE_JAR" "$BASE_URL/auth/anonymous")
 echo "RESPONSE_HEADERS:"
 cat "$GIVEN_HEADERS"
 echo "RESPONSE_BODY:"

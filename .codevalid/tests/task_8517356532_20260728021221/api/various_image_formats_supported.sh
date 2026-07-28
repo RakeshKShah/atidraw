@@ -2,7 +2,9 @@
 set -eu
 BASE_URL="${BASE_URL:-http://app:6713}"
 CASE_SUFFIX="$(date +%s)-$$"
-AUTH_COOKIE="${AUTH_COOKIE:-}"
+COOKIE_JAR="/tmp/various_image_formats_supported_cookie_${CASE_SUFFIX}.txt"
+AUTH_HEADERS="/tmp/various_image_formats_supported_auth_headers_${CASE_SUFFIX}.txt"
+AUTH_BODY="/tmp/various_image_formats_supported_auth_body_${CASE_SUFFIX}.txt"
 PNG_FILE="/tmp/various_image_formats_supported_${CASE_SUFFIX}.png"
 JPG_FILE="/tmp/various_image_formats_supported_${CASE_SUFFIX}.jpg"
 JPEG_FILE="/tmp/various_image_formats_supported_${CASE_SUFFIX}.jpeg"
@@ -10,7 +12,7 @@ HEADERS_FILE="/tmp/various_image_formats_supported_headers_${CASE_SUFFIX}.txt"
 BODY_FILE="/tmp/various_image_formats_supported_body_${CASE_SUFFIX}.bin"
 REQUEST_BODY_FILE="/tmp/various_image_formats_supported_request_${CASE_SUFFIX}.txt"
 cleanup_files() {
-  rm -f "$PNG_FILE" "$JPG_FILE" "$JPEG_FILE" "$HEADERS_FILE" "$BODY_FILE" "$REQUEST_BODY_FILE"
+  rm -f "$COOKIE_JAR" "$AUTH_HEADERS" "$AUTH_BODY" "$PNG_FILE" "$JPG_FILE" "$JPEG_FILE" "$HEADERS_FILE" "$BODY_FILE" "$REQUEST_BODY_FILE"
 }
 trap cleanup_files EXIT
 
@@ -24,11 +26,11 @@ run_case() {
   file_name="$3"
   printf '%s\n' "drawing=@${file_path};type=${file_type}" > "$REQUEST_BODY_FILE"
   echo "PREREQ: preparing format case ${file_name}"
-  echo "REQUEST_HEADERS: Cookie: ${AUTH_COOKIE}"
+  echo "REQUEST_HEADERS: Cookie: (from cookie jar)"
   echo "REQUEST_BODY:"
   cat "$REQUEST_BODY_FILE"
   status="$(curl -sS -D "$HEADERS_FILE" -o "$BODY_FILE" -w '%{http_code}' -X POST \
-    -H "Cookie: ${AUTH_COOKIE}" \
+    -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
     -F "drawing=@${file_path};type=${file_type};filename=${file_name}" \
     "$BASE_URL/api/generate")"
   echo "RESPONSE_HEADERS:"
@@ -48,13 +50,15 @@ run_case() {
   [ -s "$BODY_FILE" ] || { echo "ASSERTION_FAILED: expected non-empty generated image body for ${file_name}"; exit 1; }
 }
 
-# Given — bring the system to the required state
+# Given — bootstrap an authenticated session via /auth/anonymous
 SHORT_DESC="authenticated user with multiple image formats"
 echo "STEP: Given — ${SHORT_DESC}"
-if [ -z "$AUTH_COOKIE" ]; then
-  echo "ASSERTION_FAILED: AUTH_COOKIE must be provided for authenticated generate endpoint tests"
-  exit 1
-fi
+echo "PREREQ: bootstrapping anonymous session via /auth/anonymous"
+AUTH_STATUS=$(curl -sS -L -D "$AUTH_HEADERS" -o "$AUTH_BODY" -w '%{http_code}' \
+  -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
+  "$BASE_URL/auth/anonymous")
+echo "RESPONSE_STATUS: $AUTH_STATUS"
+[ -s "$COOKIE_JAR" ] || { echo "ASSERTION_FAILED: expected session cookie to be set after /auth/anonymous"; exit 1; }
 [ -s "$PNG_FILE" ] || { echo "ASSERTION_FAILED: PNG test file missing"; exit 1; }
 [ -s "$JPG_FILE" ] || { echo "ASSERTION_FAILED: JPG test file missing"; exit 1; }
 [ -s "$JPEG_FILE" ] || { echo "ASSERTION_FAILED: JPEG test file missing"; exit 1; }
