@@ -24,7 +24,7 @@ echo "STEP: Given — bootstrap authenticated anonymous session and prepare mini
 echo "PREREQ: create anonymous authenticated session"
 echo "REQUEST_HEADERS: Content-Type: application/json"
 echo "REQUEST_BODY: ${AUTH_REQUEST_BODY}"
-auth_code="$(curl -sS -D "$AUTH_HEADERS" -o "$AUTH_BODY" -w '%{http_code}' -c "$COOKIE_JAR" -b "$COOKIE_JAR" -X GET "$BASE_URL/auth/anonymous")"
+auth_code="$(curl -sS -L -D "$AUTH_HEADERS" -o "$AUTH_BODY" -w '%{http_code}' -c "$COOKIE_JAR" -b "$COOKIE_JAR" -X GET "$BASE_URL/auth/anonymous")"
 echo "RESPONSE_HEADERS:"
 cat "$AUTH_HEADERS"
 echo "RESPONSE_BODY:"

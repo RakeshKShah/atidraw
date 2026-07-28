@@ -35,7 +35,7 @@ echo "REQUEST_HEADERS:"
 printf '%s\n' 'Content-Type: application/json'
 echo "REQUEST_BODY:"
 printf '%s\n' '{}'
-auth_a_code="$(curl -sS -X POST "$BASE_URL/auth/anonymous" -H 'Content-Type: application/json' -d '{}' -c "$COOKIE_JAR_A" -b "$COOKIE_JAR_A" -D "$AUTH_A_HEADERS" -o "$AUTH_A_BODY" -w '%{http_code}')"
+auth_a_code="$(curl -sS -L -X GET "$BASE_URL/auth/anonymous" -c "$COOKIE_JAR_A" -b "$COOKIE_JAR_A" -D "$AUTH_A_HEADERS" -o "$AUTH_A_BODY" -w '%{http_code}')"
 echo "RESPONSE_HEADERS:"
 cat "$AUTH_A_HEADERS"
 echo "RESPONSE_BODY:"
@@ -48,7 +48,7 @@ echo "REQUEST_HEADERS:"
 printf '%s\n' 'Content-Type: application/json'
 echo "REQUEST_BODY:"
 printf '%s\n' '{}'
-auth_b_code="$(curl -sS -X POST "$BASE_URL/auth/anonymous" -H 'Content-Type: application/json' -d '{}' -c "$COOKIE_JAR_B" -b "$COOKIE_JAR_B" -D "$AUTH_B_HEADERS" -o "$AUTH_B_BODY" -w '%{http_code}')"
+auth_b_code="$(curl -sS -L -X GET "$BASE_URL/auth/anonymous" -c "$COOKIE_JAR_B" -b "$COOKIE_JAR_B" -D "$AUTH_B_HEADERS" -o "$AUTH_B_BODY" -w '%{http_code}')"
 echo "RESPONSE_HEADERS:"
 cat "$AUTH_B_HEADERS"
 echo "RESPONSE_BODY:"
