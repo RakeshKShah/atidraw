@@ -4,40 +4,52 @@ set -eu
 BASE_URL="${BASE_URL:-http://app:6713}"
 CASE_SUFFIX="$(date +%s)-$$"
 TEST_ID="upload_missing_drawing_field"
-COOKIE_JAR="${COOKIE_JAR:-/tmp/${TEST_ID}_cookies_${CASE_SUFFIX}.txt}"
-AUTH_HEADER="${AUTH_HEADER:-}"
-REQ_BODY_LOG="/tmp/${TEST_ID}_request_body_${CASE_SUFFIX}.txt"
+ITEM_ID="${TEST_ID}-${CASE_SUFFIX}"
+COOKIE_JAR="/tmp/${TEST_ID}_cookies_${CASE_SUFFIX}.txt"
+AUTH_HEADERS="/tmp/${TEST_ID}_auth_headers_${CASE_SUFFIX}.txt"
+AUTH_BODY="/tmp/${TEST_ID}_auth_body_${CASE_SUFFIX}.txt"
 RESP_HEADERS="/tmp/${TEST_ID}_headers_${CASE_SUFFIX}.txt"
 RESP_BODY="/tmp/${TEST_ID}_body_${CASE_SUFFIX}.txt"
+REQ_BODY_LOG="/tmp/${TEST_ID}_request_body_${CASE_SUFFIX}.txt"
 
 cleanup_files() {
-  rm -f "$REQ_BODY_LOG" "$RESP_HEADERS" "$RESP_BODY"
+  rm -f "$COOKIE_JAR" "$AUTH_HEADERS" "$AUTH_BODY" "$RESP_HEADERS" "$RESP_BODY" "$REQ_BODY_LOG"
 }
 trap cleanup_files EXIT
 
-printf 'multipart upload without drawing field\n' > "$REQ_BODY_LOG"
+printf 'multipart request without drawing field marker=%s\n' "$ITEM_ID" > "$REQ_BODY_LOG"
 
 # Given
-echo "STEP: Given — prepare authenticated multipart request missing drawing field"
-echo "PREREQ: requiring authenticated session while intentionally omitting drawing form field"
-if [ ! -s "$COOKIE_JAR" ] && [ -z "$AUTH_HEADER" ]; then
-  echo "ASSERTION_FAILED: this scenario requires COOKIE_JAR or AUTH_HEADER for an authenticated session"
-  exit 1
-fi
+echo "STEP: Given — bootstrap authenticated session but intentionally omit drawing field"
+echo "PREREQ: requesting anonymous session via public auth endpoint"
+echo "REQUEST_HEADERS:"
+printf '%s\n' 'Content-Type: application/json'
+echo "REQUEST_BODY:"
+printf '%s\n' '{}'
+auth_code="$(curl -sS -X POST "$BASE_URL/auth/anonymous" \
+  -H 'Content-Type: application/json' \
+  -d '{}' \
+  -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
+  -D "$AUTH_HEADERS" -o "$AUTH_BODY" -w '%{http_code}')"
+echo "RESPONSE_HEADERS:"
+cat "$AUTH_HEADERS"
+echo "RESPONSE_BODY:"
+cat "$AUTH_BODY"
+echo "RESPONSE_STATUS: $auth_code"
+case "$auth_code" in 200|201|204|302|303) ;; *) echo "ASSERTION_FAILED: expected anonymous auth bootstrap success got ${auth_code}"; exit 1 ;; esac
+[ -s "$COOKIE_JAR" ] || { echo "ASSERTION_FAILED: expected cookie jar to be populated after auth bootstrap"; exit 1; }
 
 # When
-echo "STEP: When — POST multipart request without drawing field to /api/upload"
+echo "STEP: When — perform POST /api/upload without drawing form field"
 echo "REQUEST_HEADERS:"
 printf '%s\n' 'Content-Type: multipart/form-data (curl -F)'
-if [ -n "$AUTH_HEADER" ]; then printf '%s\n' "$AUTH_HEADER"; else printf '%s\n' "Cookie jar: $COOKIE_JAR"; fi
+printf 'Cookie jar: %s\n' "$COOKIE_JAR"
 echo "REQUEST_BODY:"
 cat "$REQ_BODY_LOG"
-if [ -n "$AUTH_HEADER" ]; then
-  code="$(curl -sS -X POST "$BASE_URL/api/upload" -H "$AUTH_HEADER" -b "$COOKIE_JAR" -c "$COOKIE_JAR" -F "note=no-drawing-field" -D "$RESP_HEADERS" -o "$RESP_BODY" -w '%{http_code}')"
-else
-  code="$(curl -sS -X POST "$BASE_URL/api/upload" -b "$COOKIE_JAR" -c "$COOKIE_JAR" -F "note=no-drawing-field" -D "$RESP_HEADERS" -o "$RESP_BODY" -w '%{http_code}')"
-fi
-
+code="$(curl -sS -X POST "$BASE_URL/api/upload" \
+  -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
+  -F "note=${ITEM_ID}-no-drawing-field" \
+  -D "$RESP_HEADERS" -o "$RESP_BODY" -w '%{http_code}')"
 echo "RESPONSE_HEADERS:"
 cat "$RESP_HEADERS"
 echo "RESPONSE_BODY:"
@@ -53,5 +65,6 @@ esac
 grep -Ei 'drawing|field|undefined|null|error' "$RESP_BODY" >/dev/null 2>&1 || { echo "ASSERTION_FAILED: expected missing drawing field error details"; exit 1; }
 
 # Cleanup
-echo "STEP: Cleanup — stateless request, nothing to clean"
+echo "STEP: Cleanup — stateless validation failure, nothing to clean"
+
 echo "CODEVALID_TEST_ASSERTION_OK:upload_missing_drawing_field"
