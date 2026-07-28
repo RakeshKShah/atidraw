@@ -23,7 +23,7 @@ echo "STEP: Given — create a fresh authenticated session and prepare a valid J
 echo "PREREQ: bootstrapping anonymous session cookie"
 echo "REQUEST_HEADERS: Accept: */*"
 echo "REQUEST_BODY: empty"
-GIVEN_STATUS=$(curl -sS -D "$GIVEN_HEADERS" -o "$GIVEN_BODY" -w '%{http_code}' -c "$COOKIE_JAR" -b "$COOKIE_JAR" "$BASE_URL/auth/anonymous")
+GIVEN_STATUS=$(curl -sS -L -D "$GIVEN_HEADERS" -o "$GIVEN_BODY" -w '%{http_code}' -c "$COOKIE_JAR" -b "$COOKIE_JAR" "$BASE_URL/auth/anonymous")
 echo "RESPONSE_HEADERS:"
 cat "$GIVEN_HEADERS"
 echo "RESPONSE_BODY:"
